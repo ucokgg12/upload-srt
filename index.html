@@ -1,24 +1,82 @@
-
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SRT File Viewer</title>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unggah File ke GitHub</title>
     <script src="https://cdn.tailwindcss.com"></script>
-  <script type="importmap">
+    <style>
+        body { font-family: sans-serif; }
+        .container { max-width: 500px; margin: 2rem auto; padding: 2rem; background-color: #1f2937; border-radius: 8px; }
+        label { margin-top: 1rem; display: block; color: #d1d5db; }
+        input[type="text"], input[type="password"], input[type="file"] {
+            width: 100%;
+            padding: 0.5rem;
+            margin-top: 0.25rem;
+            border-radius: 4px;
+            border: 1px solid #4b5563;
+            background-color: #374151;
+            color: white;
+        }
+        button {
+            width: 100%;
+            padding: 0.75rem;
+            margin-top: 1.5rem;
+            border: none;
+            border-radius: 4px;
+            background-color: #16a34a;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        button:hover { background-color: #15803d; }
+        button:disabled { background-color: #4b5563; cursor: not-allowed; }
+        #status {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            border-radius: 4px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .status-success { background-color: #14532d; color: #bbf7d0; }
+        .status-error { background-color: #7f1d1d; color: #fecaca; }
+    </style>
+<script type="importmap">
 {
   "imports": {
+    "react": "https://aistudiocdn.com/react@^19.2.0",
     "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/",
-    "react": "https://aistudiocdn.com/react@^19.2.0"
+    "react/": "https://aistudiocdn.com/react@^19.2.0/"
   }
 }
 </script>
 </head>
-  <body class="bg-gray-900 text-white">
-    <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
-  </body>
+<body class="bg-gray-900 text-white">
+
+    <div class="container">
+        <h1 class="text-2xl font-bold text-center">Unggah File SRT ke GitHub</h1>
+        
+        <label for="fileInput">Pilih File .srt</label>
+        <input type="file" id="fileInput" accept=".srt" class="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
+        
+        <label for="repoOwner">Pemilik Repositori</label>
+        <input type="text" id="repoOwner" value="ucokgg12" placeholder="contoh: ucokgg12">
+
+        <label for="repoName">Nama Repositori</label>
+        <input type="text" id="repoName" value="upload-srt" placeholder="contoh: upload-srt">
+        
+        <label for="filePath">Jalur File di Repositori</label>
+        <input type="text" id="filePath" placeholder="contoh: subtitles/nama-file.srt">
+
+        <label for="githubToken">Token Akses Pribadi GitHub</label>
+        <input type="password" id="githubToken" placeholder="Tempel token Anda di sini">
+        
+        <button id="uploadButton" onclick="upload()">Unggah ke GitHub</button>
+        
+        <div id="status" style="display: none;"></div>
+    </div>
+
+    <script src="index.js"></script>
+</body>
 </html>
