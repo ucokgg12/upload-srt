@@ -42,15 +42,6 @@
         .status-success { background-color: #14532d; color: #bbf7d0; }
         .status-error { background-color: #7f1d1d; color: #fecaca; }
     </style>
-<script type="importmap">
-{
-  "imports": {
-    "react": "https://aistudiocdn.com/react@^19.2.0",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/"
-  }
-}
-</script>
 </head>
 <body class="bg-gray-900 text-white">
 
@@ -69,14 +60,11 @@
         <label for="filePath">Jalur File di Repositori</label>
         <input type="text" id="filePath" placeholder="contoh: subtitles/nama-file.srt">
 
-        <label for="githubToken">Token Akses Pribadi GitHub</label>
-        <input type="password" id="githubToken" placeholder="Tempel token Anda di sini">
-        
-        <button id="uploadButton" onclick="upload()">Unggah ke GitHub</button>
+        <button id="uploadButton">Unggah ke GitHub</button>
         
         <div id="status" style="display: none;"></div>
     </div>
 
-    <script src="index.js"></script>
+    <script type="module" src="index.js"></script>
 </body>
 </html>
