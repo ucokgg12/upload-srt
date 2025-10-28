@@ -18,6 +18,17 @@
             background-color: #374151;
             color: white;
         }
+        .preview {
+            background-color: #4b5563; /* Sedikit lebih gelap untuk menandakan non-interaktif */
+            color: #d1d5db;
+            font-family: monospace;
+            padding: 0.5rem;
+            margin-top: 0.25rem;
+            border-radius: 4px;
+            border: 1px solid #4b5563;
+            min-height: 2.25rem; /* Samakan tinggi dengan input */
+            word-break: break-all;
+        }
         button {
             width: 100%;
             padding: 0.75rem;
@@ -57,12 +68,26 @@
         <label for="repoName">Nama Repositori</label>
         <input type="text" id="repoName" value="upload-srt" placeholder="contoh: upload-srt">
         
-        <label for="filePath">Jalur File di Repositori</label>
-        <input type="text" id="filePath" placeholder="contoh: subtitles/nama-file.srt">
+        <label for="folderPath">Jalur Folder (Opsional)</label>
+        <input type="text" id="folderPath" placeholder="contoh: subtitles/movie-title">
+
+        <label for="fileName">Nama File</label>
+        <input type="text" id="fileName" placeholder="Akan terisi otomatis setelah memilih file">
+        
+        <label>Pratinjau Jalur Lengkap</label>
+        <div id="fullPathPreview" class="preview"></div>
+
 
         <button id="uploadButton">Unggah ke GitHub</button>
         
         <div id="status" style="display: none;"></div>
+    </div>
+
+    <div class="container" id="srtFilesContainer">
+        <h2 class="text-xl font-bold text-center mb-4">Daftar File SRT di Repositori</h2>
+        <div id="srtFilesList">
+            <!-- Daftar file akan dimuat di sini oleh JavaScript -->
+        </div>
     </div>
 
     <script type="module" src="index.js"></script>

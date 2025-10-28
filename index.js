@@ -1,66 +1,104 @@
 import { GITHUB_TOKEN_URL } from './api-config.js';
 
-// Kaitkan fungsi upload ke tombol unggah
-document.getElementById('uploadButton').addEventListener('click', upload);
+// === Ambil elemen DOM sekali untuk efisiensi ===
+const fileInput = document.getElementById('fileInput');
+const ownerEl = document.getElementById('repoOwner');
+const repoEl = document.getElementById('repoName');
+const folderPathEl = document.getElementById('folderPath');
+const fileNameEl = document.getElementById('fileName');
+const fullPathPreviewEl = document.getElementById('fullPathPreview');
+const statusEl = document.getElementById('status');
+const uploadButton = document.getElementById('uploadButton');
+const srtFilesListEl = document.getElementById('srtFilesList');
 
-// Cek saat pengguna memilih file untuk mengisi otomatis jalur file
-document.getElementById('fileInput').addEventListener('change', function(event) {
+// === Tambahkan Event Listeners ===
+uploadButton.addEventListener('click', upload);
+fileInput.addEventListener('change', handleFileSelect);
+folderPathEl.addEventListener('input', updateFullPathPreview);
+fileNameEl.addEventListener('input', updateFullPathPreview);
+ownerEl.addEventListener('change', fetchAndDisplaySrtFiles);
+repoEl.addEventListener('change', fetchAndDisplaySrtFiles);
+
+// Inisialisasi pratinjau dan daftar file saat halaman dimuat
+updateFullPathPreview();
+document.addEventListener('DOMContentLoaded', fetchAndDisplaySrtFiles);
+
+
+/**
+ * Menangani pemilihan file oleh pengguna.
+ * Mengisi otomatis nama file dan memperbarui pratinjau.
+ */
+function handleFileSelect(event) {
     const file = event.target.files[0];
     if (file) {
-        // Default ke root jika tidak ada path yang ditentukan
-        const currentPath = document.getElementById('filePath').value.trim();
-        if (!currentPath.includes('/')) {
-             document.getElementById('filePath').value = file.name;
-        }
+        fileNameEl.value = file.name;
+        updateFullPathPreview();
     }
-});
+}
 
+/**
+ * Memperbarui pratinjau jalur lengkap berdasarkan input folder dan nama file.
+ */
+function updateFullPathPreview() {
+    const folder = folderPathEl.value.trim().replace(/\/$/, ''); // Hapus garis miring di akhir
+    const file = fileNameEl.value.trim();
+
+    if (!file) {
+        fullPathPreviewEl.textContent = '';
+        return;
+    }
+
+    fullPathPreviewEl.textContent = folder ? `${folder}/${file}` : file;
+}
+
+/**
+ * Fungsi pembantu untuk mengambil token GitHub dari API.
+ * @returns {Promise<string>} Token GitHub.
+ */
+async function getToken() {
+    const tokenResponse = await fetch(GITHUB_TOKEN_URL);
+    if (!tokenResponse.ok) {
+        throw new Error(`Gagal mengambil token. Status: ${tokenResponse.status}`);
+    }
+    const tokenData = await tokenResponse.json();
+    const token = tokenData.github_token;
+    if (!token) {
+        throw new Error("Token tidak ditemukan dalam respons API.");
+    }
+    return token;
+}
+
+/**
+ * Mengunggah file yang dipilih ke repositori GitHub.
+ */
 async function upload() {
-    // === Ambil elemen dan nilai dari DOM ===
-    const fileInput = document.getElementById('fileInput');
-    const owner = document.getElementById('repoOwner').value.trim();
-    const repo = document.getElementById('repoName').value.trim();
-    const path = document.getElementById('filePath').value.trim();
-    const statusEl = document.getElementById('status');
-    const uploadButton = document.getElementById('uploadButton');
-
+    const owner = ownerEl.value.trim();
+    const repo = repoEl.value.trim();
+    const path = fullPathPreviewEl.textContent.trim();
     const file = fileInput.files[0];
 
-    // === Validasi Input ===
     if (!file) {
         showStatus("Pilih file terlebih dahulu!", "error");
         return;
     }
     if (!owner || !repo || !path) {
-        showStatus("Harap isi semua detail repositori.", "error");
+        showStatus("Harap isi semua detail repositori dan pastikan ada nama file.", "error");
         return;
     }
 
-    // === Nonaktifkan tombol dan tampilkan status loading ===
     uploadButton.disabled = true;
     uploadButton.textContent = "Mengunggah...";
     showStatus("Sedang memproses...", "loading");
 
     try {
-        // 0. Ambil token dari API
         showStatus("Mengambil token...", "loading");
-        const tokenResponse = await fetch(GITHUB_TOKEN_URL);
-        if (!tokenResponse.ok) {
-            throw new Error(`Gagal mengambil token. Status: ${tokenResponse.status}`);
-        }
-        const tokenData = await tokenResponse.json();
-        const token = tokenData.github_token;
-        if (!token) {
-            throw new Error("Token tidak ditemukan dalam respons API.");
-        }
-
+        const token = await getToken();
         const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
         const headers = {
             "Authorization": `token ${token}`,
             "Accept": "application/vnd.github.v3+json",
         };
 
-        // 1. Cek apakah file sudah ada untuk mendapatkan SHA
         let existingFileSha = null;
         showStatus("Mengecek file di repositori...", "loading");
         const checkResponse = await fetch(apiUrl, { headers });
@@ -68,19 +106,15 @@ async function upload() {
         if (checkResponse.ok) {
             const existingFile = await checkResponse.json();
             existingFileSha = existingFile.sha;
-            console.log(`File ditemukan. SHA: ${existingFileSha}`);
         } else if (checkResponse.status !== 404) {
-            // Jika errornya bukan 404 (Not Found), maka ada masalah lain
             const errorData = await checkResponse.json();
             throw new Error(errorData.message || `Gagal memeriksa file. Status: ${checkResponse.status}`);
         }
 
-        // 2. Baca konten file dan encode ke Base64
         showStatus("Membaca dan mengenkode file...", "loading");
         const content = await file.text();
         const encodedContent = btoa(unescape(encodeURIComponent(content)));
 
-        // 3. Buat body permintaan, tambahkan SHA jika ada
         const commitMessage = `feat: ${existingFileSha ? 'update' : 'add'} file ${path}`;
         const body = {
             message: commitMessage,
@@ -90,7 +124,6 @@ async function upload() {
             body.sha = existingFileSha;
         }
 
-        // 4. Kirim permintaan PUT untuk membuat/memperbarui file
         showStatus(`Mengunggah ${existingFileSha ? 'pembaruan' : 'file baru'}...`, "loading");
         const response = await fetch(apiUrl, {
             method: "PUT",
@@ -100,10 +133,10 @@ async function upload() {
 
         const data = await response.json();
 
-        // 5. Tampilkan hasil ke pengguna
         if (response.ok) {
             const successMessage = existingFileSha ? "File berhasil diperbarui!" : "File berhasil dibuat!";
             showStatus(successMessage, "success");
+            fetchAndDisplaySrtFiles(); // Muat ulang daftar file setelah berhasil
         } else {
             throw new Error(data.message || `Gagal dengan status ${response.status}`);
         }
@@ -112,11 +145,85 @@ async function upload() {
         showStatus(`Gagal mengunggah: ${error.message}`, "error");
         console.error("Upload error:", error);
     } finally {
-        // === Aktifkan kembali tombol setelah selesai ===
         uploadButton.disabled = false;
         uploadButton.textContent = "Unggah ke GitHub";
     }
 }
+
+/**
+ * Mengambil dan menampilkan semua file .srt dari repositori yang ditentukan.
+ */
+async function fetchAndDisplaySrtFiles() {
+    const owner = ownerEl.value.trim();
+    const repo = repoEl.value.trim();
+
+    if (!owner || !repo) {
+        srtFilesListEl.innerHTML = '<p class="text-gray-400">Masukkan pemilik dan nama repositori untuk melihat daftar file.</p>';
+        return;
+    }
+
+    srtFilesListEl.innerHTML = '<p class="text-blue-300">Memuat daftar file SRT...</p>';
+
+    try {
+        const token = await getToken();
+        const headers = {
+            "Authorization": `token ${token}`,
+            "Accept": "application/vnd.github.v3+json",
+        };
+
+        const repoInfoResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers });
+        if (!repoInfoResponse.ok) throw new Error('Gagal mengambil info repositori. Periksa nama pemilik/repo.');
+        const repoInfo = await repoInfoResponse.json();
+        const defaultBranch = repoInfo.default_branch;
+
+        const treeResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/${defaultBranch}?recursive=1`, { headers });
+        if (!treeResponse.ok) throw new Error('Gagal mengambil struktur file.');
+        const treeData = await treeResponse.json();
+
+        const srtFiles = treeData.tree.filter(item => item.type === 'blob' && item.path.endsWith('.srt'));
+
+        srtFilesListEl.innerHTML = ''; // Hapus pesan loading
+
+        if (srtFiles.length === 0) {
+            srtFilesListEl.innerHTML = '<p class="text-gray-400">Tidak ada file .srt ditemukan di repositori ini.</p>';
+            return;
+        }
+
+        srtFiles.forEach(file => {
+            const fileItem = document.createElement('div');
+            fileItem.className = 'flex justify-between items-center bg-gray-700 p-2 rounded mb-2';
+
+            const filePathEl = document.createElement('span');
+            filePathEl.className = 'text-gray-300 font-mono text-sm break-all pr-2';
+            filePathEl.textContent = file.path;
+
+            const copyButton = document.createElement('button');
+            copyButton.textContent = 'Salin Tautan';
+            copyButton.className = 'bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold py-1 px-2 rounded flex-shrink-0';
+            copyButton.style.width = 'auto';
+            copyButton.style.marginTop = '0';
+            
+            copyButton.onclick = () => {
+                const url = `https://github.com/${owner}/${repo}/blob/${defaultBranch}/${file.path}`;
+                navigator.clipboard.writeText(url).then(() => {
+                    copyButton.textContent = 'Disalin!';
+                    setTimeout(() => {
+                        copyButton.textContent = 'Salin Tautan';
+                    }, 2000);
+                });
+            };
+
+            fileItem.appendChild(filePathEl);
+            fileItem.appendChild(copyButton);
+            srtFilesListEl.appendChild(fileItem);
+        });
+
+    } catch (error) {
+        srtFilesListEl.innerHTML = `<p class="text-red-400">Gagal memuat file: ${error.message}</p>`;
+        console.error("Fetch SRT files error:", error);
+    }
+}
+
 
 /**
  * Menampilkan pesan status di UI.
@@ -124,11 +231,9 @@ async function upload() {
  * @param {'success' | 'error' | 'loading'} type Jenis pesan.
  */
 function showStatus(message, type) {
-    const statusEl = document.getElementById('status');
     statusEl.textContent = message;
     statusEl.style.display = 'block';
 
-    // Reset kelas warna
     statusEl.className = 'mt-4 p-3 rounded-md text-center font-bold';
 
     if (type === 'success') {
