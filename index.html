@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Unggah File ke GitHub</title>
+    <title>Unggah File Subtitle ke GitHub</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: sans-serif; }
@@ -57,10 +57,10 @@
 <body class="bg-gray-900 text-white">
 
     <div class="container">
-        <h1 class="text-2xl font-bold text-center">Unggah File SRT ke GitHub</h1>
+        <h1 class="text-2xl font-bold text-center">Unggah File Subtitle ke GitHub</h1>
         
-        <label for="fileInput">Pilih File .srt</label>
-        <input type="file" id="fileInput" accept=".srt" class="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
+        <label for="fileInput">Pilih File Subtitle (.srt, .vtt)</label>
+        <input type="file" id="fileInput" accept=".srt,.vtt" class="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
         
         <label for="repoOwner">Pemilik Repositori</label>
         <input type="text" id="repoOwner" value="ucokgg12" placeholder="contoh: ucokgg12">
@@ -84,7 +84,7 @@
     </div>
 
     <div class="container" id="srtFilesContainer">
-        <h2 class="text-xl font-bold text-center mb-4">Daftar File SRT di Repositori</h2>
+        <h2 class="text-xl font-bold text-center mb-4">Daftar File Subtitle di Repositori</h2>
         <div id="srtFilesList">
             <!-- Daftar file akan dimuat di sini oleh JavaScript -->
         </div>

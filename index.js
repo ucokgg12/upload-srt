@@ -1,3 +1,4 @@
+
 import { GITHUB_TOKEN_URL } from './api-config.js';
 
 // === Ambil elemen DOM sekali untuk efisiensi ===
@@ -16,12 +17,12 @@ uploadButton.addEventListener('click', upload);
 fileInput.addEventListener('change', handleFileSelect);
 folderPathEl.addEventListener('input', updateFullPathPreview);
 fileNameEl.addEventListener('input', updateFullPathPreview);
-ownerEl.addEventListener('change', fetchAndDisplaySrtFiles);
-repoEl.addEventListener('change', fetchAndDisplaySrtFiles);
+ownerEl.addEventListener('change', fetchAndDisplaySubtitleFiles);
+repoEl.addEventListener('change', fetchAndDisplaySubtitleFiles);
 
 // Inisialisasi pratinjau dan daftar file saat halaman dimuat
 updateFullPathPreview();
-document.addEventListener('DOMContentLoaded', fetchAndDisplaySrtFiles);
+document.addEventListener('DOMContentLoaded', fetchAndDisplaySubtitleFiles);
 
 
 /**
@@ -136,7 +137,7 @@ async function upload() {
         if (response.ok) {
             const successMessage = existingFileSha ? "File berhasil diperbarui!" : "File berhasil dibuat!";
             showStatus(successMessage, "success");
-            fetchAndDisplaySrtFiles(); // Muat ulang daftar file setelah berhasil
+            fetchAndDisplaySubtitleFiles(); // Muat ulang daftar file setelah berhasil
         } else {
             throw new Error(data.message || `Gagal dengan status ${response.status}`);
         }
@@ -151,9 +152,9 @@ async function upload() {
 }
 
 /**
- * Mengambil dan menampilkan semua file .srt dari repositori yang ditentukan.
+ * Mengambil dan menampilkan semua file .srt dan .vtt dari repositori yang ditentukan.
  */
-async function fetchAndDisplaySrtFiles() {
+async function fetchAndDisplaySubtitleFiles() {
     const owner = ownerEl.value.trim();
     const repo = repoEl.value.trim();
 
@@ -162,7 +163,7 @@ async function fetchAndDisplaySrtFiles() {
         return;
     }
 
-    srtFilesListEl.innerHTML = '<p class="text-blue-300">Memuat daftar file SRT...</p>';
+    srtFilesListEl.innerHTML = '<p class="text-blue-300">Memuat daftar file subtitle...</p>';
 
     try {
         const token = await getToken();
@@ -171,57 +172,70 @@ async function fetchAndDisplaySrtFiles() {
             "Accept": "application/vnd.github.v3+json",
         };
 
-        const repoInfoResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers });
-        if (!repoInfoResponse.ok) throw new Error('Gagal mengambil info repositori. Periksa nama pemilik/repo.');
-        const repoInfo = await repoInfoResponse.json();
-        const defaultBranch = repoInfo.default_branch;
-
-        const treeResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/${defaultBranch}?recursive=1`, { headers });
-        if (!treeResponse.ok) throw new Error('Gagal mengambil struktur file.');
-        const treeData = await treeResponse.json();
-
-        const srtFiles = treeData.tree.filter(item => item.type === 'blob' && item.path.endsWith('.srt'));
-
-        srtFilesListEl.innerHTML = ''; // Hapus pesan loading
-
-        if (srtFiles.length === 0) {
-            srtFilesListEl.innerHTML = '<p class="text-gray-400">Tidak ada file .srt ditemukan di repositori ini.</p>';
+        const treeResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/main?recursive=1`, { headers });
+        if (!treeResponse.ok) {
+             const masterTreeResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/master?recursive=1`, { headers });
+            if (!masterTreeResponse.ok) throw new Error('Gagal mengambil struktur file dari branch main atau master.');
+            const treeData = await masterTreeResponse.json();
+            displaySubtitleFiles(treeData.tree, owner, repo);
             return;
         }
-
-        srtFiles.forEach(file => {
-            const fileItem = document.createElement('div');
-            fileItem.className = 'flex justify-between items-center bg-gray-700 p-2 rounded mb-2';
-
-            const filePathEl = document.createElement('span');
-            filePathEl.className = 'text-gray-300 font-mono text-sm break-all pr-2';
-            filePathEl.textContent = file.path;
-
-            const copyButton = document.createElement('button');
-            copyButton.textContent = 'Salin Tautan';
-            copyButton.className = 'bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold py-1 px-2 rounded flex-shrink-0';
-            copyButton.style.width = 'auto';
-            copyButton.style.marginTop = '0';
-            
-            copyButton.onclick = () => {
-                const url = `https://github.com/${owner}/${repo}/blob/${defaultBranch}/${file.path}`;
-                navigator.clipboard.writeText(url).then(() => {
-                    copyButton.textContent = 'Disalin!';
-                    setTimeout(() => {
-                        copyButton.textContent = 'Salin Tautan';
-                    }, 2000);
-                });
-            };
-
-            fileItem.appendChild(filePathEl);
-            fileItem.appendChild(copyButton);
-            srtFilesListEl.appendChild(fileItem);
-        });
+        const treeData = await treeResponse.json();
+        displaySubtitleFiles(treeData.tree, owner, repo);
 
     } catch (error) {
         srtFilesListEl.innerHTML = `<p class="text-red-400">Gagal memuat file: ${error.message}</p>`;
-        console.error("Fetch SRT files error:", error);
+        console.error("Fetch subtitle files error:", error);
     }
+}
+
+/**
+ * Merender daftar file subtitle ke DOM.
+ * @param {Array} tree - Daftar file dari API GitHub Tree.
+ * @param {string} owner - Pemilik repositori.
+ * @param {string} repo - Nama repositori.
+ */
+function displaySubtitleFiles(tree, owner, repo) {
+    const subtitleFiles = tree.filter(item => {
+        const lowerPath = item.path.toLowerCase();
+        return item.type === 'blob' && (lowerPath.endsWith('.srt') || lowerPath.endsWith('.vtt'));
+    });
+
+    srtFilesListEl.innerHTML = ''; // Hapus pesan loading
+
+    if (subtitleFiles.length === 0) {
+        srtFilesListEl.innerHTML = '<p class="text-gray-400">Tidak ada file .srt atau .vtt ditemukan di repositori ini.</p>';
+        return;
+    }
+
+    subtitleFiles.forEach(file => {
+        const fileItem = document.createElement('div');
+        fileItem.className = 'flex justify-between items-center bg-gray-700 p-2 rounded mb-2';
+
+        const filePathEl = document.createElement('span');
+        filePathEl.className = 'text-gray-300 font-mono text-sm break-all pr-2';
+        filePathEl.textContent = file.path;
+
+        const copyButton = document.createElement('button');
+        copyButton.textContent = 'Salin Tautan';
+        copyButton.className = 'bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold py-1 px-2 rounded flex-shrink-0';
+        copyButton.style.width = 'auto';
+        copyButton.style.marginTop = '0';
+        
+        copyButton.onclick = () => {
+            const url = `https://${owner}.github.io/${repo}/${file.path}`;
+            navigator.clipboard.writeText(url).then(() => {
+                copyButton.textContent = 'Disalin!';
+                setTimeout(() => {
+                    copyButton.textContent = 'Salin Tautan';
+                }, 2000);
+            });
+        };
+
+        fileItem.appendChild(filePathEl);
+        fileItem.appendChild(copyButton);
+        srtFilesListEl.appendChild(fileItem);
+    });
 }
 
 
