@@ -1,0 +1,5 @@
+{
+  "name": "SRT File Viewer",
+  "description": "An elegant web application to upload, parse, and view the contents of SubRip Subtitle (.srt) files directly in your browser. Perfect for checking subtitle timing and text without any software installation.",
+  "requestFramePermissions": []
+}
